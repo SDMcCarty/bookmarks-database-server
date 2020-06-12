@@ -4,7 +4,7 @@ const morgan = require('morgan')
 const cors = require('cors')
 const helmet = require('helmet')
 const { NODE_ENV, API_TOKEN } = require('./config')
-const bookmarksRouter = require('./bookmark-router')
+const bookmarksRouter = require('./bookmarks/bookmark-router')
 const logger = require('./logger')
 
 const app = express()

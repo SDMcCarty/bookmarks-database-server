@@ -1,5 +1,5 @@
 require('dotenv').config()
-const BookmarksService = require('../src/bookmarks-service')
+const BookmarksService = require('../src/bookmarks/bookmarks-service')
 const knex = require('knex')
 const { TEST_DB_URL, API_TOKEN } = require('../src/config')
 const app = require('../src/app')
