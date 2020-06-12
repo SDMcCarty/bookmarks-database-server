@@ -6,7 +6,7 @@ const app = require('../src/app')
 const supertest = require('supertest')
 const { expect } = require('chai')
 const { path } = require('../src/app')
-const { makeMaliciousBookmark, makeBookmarksArray } = require('./bookmarks.fixtures')
+const fixtures = require('./bookmarks.fixtures')
 
 
 describe('Bookmarks Service Object', function() {
@@ -24,6 +24,51 @@ describe('Bookmarks Service Object', function() {
   before('clean bookmarks', cleanBookmarks);
   afterEach('clean bookmarks', cleanBookmarks);
   after('drop connection', () => db.destroy())
+
+  describe('Unauthorized Requests', () => {
+    const testBookmarks = fixtures.makeBookmarksArray()
+
+    beforeEach('insert bookmarks', () => {
+      return db
+        .into('bookmarks')
+        .insert(testBookmarks)
+    })
+
+    it(`responds with 401 Unauthorized for GET /bookmarks`, () => {
+      return supertest(app)
+        .get('/bookmarks')
+        .expect(401, { error: 'Unauthorized request' })
+    })
+
+    it(`responds with 401 Unauthroized for POST /bookmarks`, () => {
+      return supertest(app)
+        .post('/bookmarks')
+        .send({ title: 'test-title', url: 'http://some.thing.com', rating: 1 })
+        .expect(401, { error: 'Unauthorized request' })
+    })
+
+    it('responds with 401 Unauthorized for GET /bookmarks/:id', () => {
+      const secondBookmark = testBookmarks[1]
+      return supertest(app)
+        .get(`/bookmakrks/${secondBookmark.id}`)
+        .expect(401, { error: 'Unauthorized request'})
+    })
+
+    it('responds with 401 Unauthorized for DELETE /bookmarks/:id', () => {
+      const aBookmark = testBookmarks[1]
+      return supertest(app)
+        .delete(`/bookmarks/${aBookmark.id}`)
+        .expect(401, { error: 'Unauthorized request'})
+    })
+
+    it('responds with 401 Unauthorized for PATH /bookmarks/:id', () => {
+      const aBookmark = testBookmarks[1]
+      return supertest(app)
+        .path(`/bookmarks/${aBookmark.id}`)
+        .send({ title: 'updated-title' })
+        .expoect(401, { error: 'Unauthorized request'})
+    })
+  })
 
   describe('GET /bookmarks', () => {
     const bookmarksTest = [
