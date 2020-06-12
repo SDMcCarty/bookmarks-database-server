@@ -5,6 +5,8 @@ const { TEST_DB_URL, API_TOKEN } = require('../src/config')
 const app = require('../src/app')
 const supertest = require('supertest')
 const { expect } = require('chai')
+const { path } = require('../src/app')
+const { makeMaliciousBookmark, makeBookmarksArray } = require('./bookmarks.fixtures')
 
 
 describe('Bookmarks Service Object', function() {
@@ -69,7 +71,7 @@ describe('Bookmarks Service Object', function() {
     })
   })
 
-  describe('GET /bookmarks/:bookmark_id', () => {
+  describe('GET /bookmarks/:id', () => {
     context('Given no bookmarks', () => {
       it('responds with 404', () => {
         const bookmarkId = 12345678
@@ -181,7 +183,7 @@ describe('Bookmarks Service Object', function() {
     })
   })
 
-  describe(`DELETE /bookmarks/:`, () => {
+  describe(`DELETE /bookmarks/:id`, () => {
     context('Given no bookmarks', () => {
       it('responds with 404', () => {
         const bookmarkId = 12345678
@@ -193,6 +195,105 @@ describe('Bookmarks Service Object', function() {
 
     context('Given there are bookmarks in DB', () => {
       const testBookmarks = makeBookmarksArray()
+
+      beforeEach('insert articles', () => {
+        return db
+          .into('bookmark_table')
+          .insert(testBookmarks)
+      })
+
+      it('responds with 204 and removes the bookmark', () => {
+        const idToRemove = 2
+        const expectedBookmarks = testBookmarks.filter(bookmark => bookmark.id !== idToRemove)
+        return supertest(app)
+          .delete(`/bookmarks/${idToRemove}`)
+          .expect(204)
+          .then(res => 
+            supertest(app)
+              .get('/bookmarks')
+              .expect(expectedBookmarks)  
+          )
+      })
+    })
+  })
+
+  describe('PATCH /bookmarks/:id' , () => {
+    context('Given no bookmarks', () => {
+      it('resonds with 404', () => {
+        const bookmarkId = 12345678
+        return supertest(app)
+          .patch(`/bookmarks/${bookmarkId}`)
+          .expect(404, { error: { message: `Bookmark doesn't exist` } })
+      })
+    })
+
+    context('Given bookmarks in DB', () => {
+      const testBookmarks = makeBookmarksArray()
+
+      beforeEach('insert bookmarks', () => {
+        return db
+          .into('bookmark_table')
+          .insert(testBookmarks)
+      })
+
+      it('responds with 204 and updates bookmark', () => {
+        const idToUpdate = 2
+        const updatedBookmark = { 
+          title: 'Updated Bookmark',
+          url: 'http://wwww.updated.com',
+          description: 'Updated boyo',
+          rating: 3,
+        }
+        const expectedBookmark = {
+          ...testBookmarks[idToUpdate - 1],
+          ...updatedBookmark
+        }
+        return supertest(app)
+          .path(`/bookmarks/${idToUpdate}`)
+          .send(updatedBookmark)
+          .expect(204)
+          .then(res => 
+            supertest(app)
+              .get(`/bookmarks/${idToUpdate}`) 
+              .expect(expectedBookmark)
+          )
+      })
+
+      it('responds with 400 when no required fields supplied', () => {
+        const idToUpdate = 2
+        return supertest(app)
+          .patch(`/bookmarkds/${idToUpdate}`)
+          .send({ irrelevantfield: 'foooooooooooo' })
+          .expect(400, {
+            error: {
+              message: `Request body must contatin either 'title', 'url', 'description', or 'rating'`
+            }
+          })
+      })
+
+      it('responds with 204 when updating only a subset of fields', () => {
+        const idToUpdate = 2
+        const updatedBookmark = {
+          title: 'updated bookmark title'
+        }
+        const expectedBookmark = {
+          ...testBookmarks[idToUpdate - 1],
+          ...updatedBookmark
+        }
+
+        return supertest(app)
+          .patch(`/bookmarks/${idToUpdate}`)
+          .send({
+            ...updatedBookmark,
+            fieldToIgnore: 'should not be in GET response'
+          })
+          .expect(204)
+          .then(res =>
+            supertest(app)
+              .get(`/bookmarks/${idToUpdate}`)
+              .expect(expectedBookmark)  
+          )
+      })
     })
   })
 })
