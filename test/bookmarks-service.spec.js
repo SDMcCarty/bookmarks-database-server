@@ -71,26 +71,22 @@ describe('Bookmarks Service Object', function() {
   })
 
   describe('GET /bookmarks', () => {
-    const bookmarksTest = [
-      {
-        "id": 1,
-        "title": "Best Bookmark",
-        "url": "http://www.thebestest.com",
-        "description": "The Best Site Ever",
-        "rating": 5
-      }, 
-      {
-        "id": 2,
-        "title": "NOT Best Bookmark",
-        "url": "http://www.notthebestest.com",
-        "description": "NOT The Best Site Ever",
-        "rating": 1
-      }
-    ]
+    context('Given no bookmarks', () => {
+      it('responds with 200 and an empty list', () => {
+        return supertest(app)
+          .get('/bookmarks')
+          .set('Authorization', `Bearer ${API_TOKEN}`)
+          .expect(200, [])
+      })
+
+    })
     context('when bookmarks has data', () => {
+      const bookmarksTest = fixtures.makeBookmarksArray()
       
       beforeEach('instert bookmarks', () => {
-        return db('bookmark_table').insert(bookmarksTest)
+        return db
+          .into('bookmark_table')
+          .insert(bookmarksTest)
       })
 
       it('should return 200 with all bookmarks', () => {
@@ -111,9 +107,7 @@ describe('Bookmarks Service Object', function() {
 
     })
 
-    context('when bookmarks has no data', () => {
 
-    })
   })
 
   describe('GET /bookmarks/:id', () => {
@@ -122,6 +116,7 @@ describe('Bookmarks Service Object', function() {
         const bookmarkId = 12345678
         return supertest(app)
           .get(`/bookmarks/${bookmarkId}`)
+          .set('Authorization', `Bearer ${API_TOKEN}`)
           .expect(404, { error: { message: `Article doesn't exist` } })
       })
     })
@@ -140,6 +135,7 @@ describe('Bookmarks Service Object', function() {
         const expectedBookmark = testBookmarks[bookmarkId - 1]
         return supertest(app)
           .get(`/bookmarks/${bookmarkId}`)
+          .set('Authorization', `Bearer ${API_TOKEN}`)
           .expect(200, expectedBookmark)
       })
     })
@@ -156,10 +152,10 @@ describe('Bookmarks Service Object', function() {
       it('removes XSS attack content', () => {
         return supertest(app)
           .get(`/bookmarks/${maliciousBookmark.id}`)
+          .set('Authorization', `Bearer ${API_TOKEN}`)
           .expect(200)
           .expect(res => {
             expect(res.body.title).to.eql(expectedBookmark.title)
-            expect(res.body.url).to.eql(expectedBookmark.utl)
             expect(res.body.description).to.eql(expectedBookmark.description)
           })
       })
@@ -207,6 +203,7 @@ describe('Bookmarks Service Object', function() {
 
         return supertest(app)
           .post('/bookmarks')
+          .set('Authorization', `Bearer ${API_TOKEN}`)
           .send(newBookmark)
           .expect(400, {
             error: { message: `Missing '${field}' in request body` }
@@ -218,6 +215,7 @@ describe('Bookmarks Service Object', function() {
       const { maliciousBookmark, expectedBookmark } = makeMaliciousBookmark()
       return supertest(app)
         .post('/bookmarks')
+        .set('Authorization', `Bearer ${API_TOKEN}`)
         .send(maliciousBookmark)
         .expect(201)
         .expect(res => {
@@ -234,6 +232,7 @@ describe('Bookmarks Service Object', function() {
         const bookmarkId = 12345678
         return supertest(app)
           .delete(`/bookmarks/${bookmarkId}`)
+          .set('Authorization', `Bearer ${API_TOKEN}`)
           .expect(404, { error: { message: `Article doesn't exist` } })
       })
     })
@@ -252,6 +251,7 @@ describe('Bookmarks Service Object', function() {
         const expectedBookmarks = testBookmarks.filter(bookmark => bookmark.id !== idToRemove)
         return supertest(app)
           .delete(`/bookmarks/${idToRemove}`)
+          .set('Authorization', `Bearer ${API_TOKEN}`)
           .expect(204)
           .then(res => 
             supertest(app)
@@ -268,6 +268,7 @@ describe('Bookmarks Service Object', function() {
         const bookmarkId = 12345678
         return supertest(app)
           .patch(`/bookmarks/${bookmarkId}`)
+          .set('Authorization', `Bearer ${API_TOKEN}`)
           .expect(404, { error: { message: `Bookmark doesn't exist` } })
       })
     })
@@ -295,6 +296,7 @@ describe('Bookmarks Service Object', function() {
         }
         return supertest(app)
           .path(`/bookmarks/${idToUpdate}`)
+          .set('Authorization', `Bearer ${API_TOKEN}`)
           .send(updatedBookmark)
           .expect(204)
           .then(res => 
@@ -308,6 +310,7 @@ describe('Bookmarks Service Object', function() {
         const idToUpdate = 2
         return supertest(app)
           .patch(`/bookmarkds/${idToUpdate}`)
+          .set('Authorization', `Bearer ${API_TOKEN}`)
           .send({ irrelevantfield: 'foooooooooooo' })
           .expect(400, {
             error: {
@@ -328,6 +331,7 @@ describe('Bookmarks Service Object', function() {
 
         return supertest(app)
           .patch(`/bookmarks/${idToUpdate}`)
+          .set('Authorization', `Bearer ${API_TOKEN}`)
           .send({
             ...updatedBookmark,
             fieldToIgnore: 'should not be in GET response'
